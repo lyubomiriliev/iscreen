@@ -58,7 +58,7 @@ enum Capturer {
 }
 
 enum ScreenshotFiles {
-    /// Screenshots used for drag & drop live here; anything older than a day is cleaned up on launch.
+    /// Screenshots used for drag & drop and ⇧⌘C paths live here; files older than a week are cleaned up on launch.
     static var directory: URL {
         let base = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
         let dir = base.appendingPathComponent("com.iscreen.app/Screenshots", isDirectory: true)
@@ -77,7 +77,7 @@ enum ScreenshotFiles {
         var url = folder.appendingPathComponent(baseName + ".png")
         var n = 2
         while FileManager.default.fileExists(atPath: url.path) {
-            url = folder.appendingPathComponent("\(baseName) \(n).png")
+            url = folder.appendingPathComponent("\(baseName)-\(n).png")
             n += 1
         }
         return url
@@ -85,7 +85,7 @@ enum ScreenshotFiles {
 
     static func cleanUp() {
         let fm = FileManager.default
-        let cutoff = Date().addingTimeInterval(-24 * 60 * 60)
+        let cutoff = Date().addingTimeInterval(-7 * 24 * 60 * 60)
         let files = (try? fm.contentsOfDirectory(at: directory, includingPropertiesForKeys: [.contentModificationDateKey])) ?? []
         for file in files {
             let modified = (try? file.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate

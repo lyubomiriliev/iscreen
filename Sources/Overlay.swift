@@ -126,38 +126,47 @@ final class OverlayController {
         }
     }
 
-    /// Copies the image with a caption strip underneath: where it's from (app, window, time) plus,
-    /// when available, an on-device AI description. The plain image is copied immediately so a fast
-    /// paste never comes up empty; the captioned version replaces it a moment later.
+    /// Copies text for Claude Code: the saved screenshot's file path, where it came from and — when
+    /// available — an on-device AI description. Claude Code reads the image from the path, so one paste
+    /// delivers both. (Copying image and text together doesn't work: Claude Code keeps only the image.)
     func copyWithDescription(from view: SelectionView) {
         let source = sourceView(preferring: view)
         let context = source.sourceContext()
-        let scale = Settings.downscaleRetina ? 1 : source.backingScale
-        guard let encoded = source.encode() else { cancel(); return }
-        _ = Clipboard.write(png: encoded.data)
-        close()
+        let original = source.originalImage()
+        guard let encoded = source.encode(),
+              let url = ScreenshotFiles.write(encoded.data, baseName: context.pathSafeBaseName)
+        else { cancel(); return }
 
-        func finish(description: String?) {
-            guard let captioned = Caption.add(to: encoded.image, lines: [context.captionLine, description ?? ""], scale: scale),
-                  let png = ImageEncoder.encode(captioned, crop: CGRect(x: 0, y: 0, width: captioned.width, height: captioned.height),
-                                                scale: 1, downscale: false)
-            else { return }
-            if Clipboard.write(png: png.data) {
-                HUD.show(description == nil ? "Copied with source info" : "Copied with description")
-            }
+        func text(_ description: String?) -> String {
+            ["[Screenshot: \(url.path)]", context.captionLine, description].compactMap { $0 }.joined(separator: "\n")
+        }
+        // Path + source go on the clipboard right away, so a fast paste is never empty.
+        let copied = Clipboard.write(text: text(nil))
+        close()
+        guard copied else {
+            HUD.show("Copy failed", symbol: "exclamationmark.triangle.fill")
+            return
+        }
+        guard OnDeviceAI.isAvailable else {
+            HUD.show("Copied screenshot path + source")
+            return
         }
 
-        guard OnDeviceAI.isAvailable else { finish(description: nil); return }
         HUD.show("Writing description…", symbol: "sparkles", tint: .controlAccentColor, duration: 30)
         let changeCount = NSPasteboard.general.changeCount
         Task { @MainActor in
-            let description = await OnDeviceAI.describe(encoded.image, context: context)
+            let visibleText = await Task.detached(priority: .userInitiated) { original.map(TextRecognizer.recognize) }.value
+            let description = await OnDeviceAI.describe(encoded.image, context: context, visibleText: visibleText)
             // Don't clobber something the user copied in the meantime.
             guard NSPasteboard.general.changeCount == changeCount else {
                 HUD.show("Description skipped — clipboard changed", symbol: "exclamationmark.triangle.fill")
                 return
             }
-            finish(description: description)
+            if let description, Clipboard.write(text: text(description)) {
+                HUD.show("Copied screenshot path + description")
+            } else {
+                HUD.show("Copied screenshot path + source")
+            }
         }
     }
 

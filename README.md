@@ -24,7 +24,7 @@ In the selection overlay:
 | Key | Action |
 |---|---|
 | ⌘C / Enter | Copy |
-| ⇧⌘C | Copy with description (source + on-device AI caption) |
+| ⇧⌘C | Copy for Claude Code: screenshot file path + source + on-device AI description, as text |
 | ⌘T | Copy text (OCR) |
 | ⌘S | Save to Desktop with a smart file name |
 | Esc | Cancel |

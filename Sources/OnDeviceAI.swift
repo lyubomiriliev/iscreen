@@ -40,10 +40,16 @@ enum OnDeviceAI {
     }
 
     /// One or two sentences describing the screenshot.
-    static func describe(_ image: CGImage, context: SourceContext) async -> String? {
+    /// `visibleText` (from text recognition) lets the model quote names and titles exactly,
+    /// e.g. Cyrillic text that it would otherwise misspell.
+    static func describe(_ image: CGImage, context: SourceContext, visibleText: String? = nil) async -> String? {
         var prompt = "Describe this screenshot in one or two short, factual sentences (max 40 words). "
         prompt += "Mention what app or website it is and the key information visible."
         if let label = context.label { prompt += " It was taken from: \(label)." }
+        if let visibleText, !visibleText.isEmpty {
+            prompt += "\n\nText recognized in the screenshot (copy names and titles exactly from here, in their original alphabet):\n"
+            prompt += String(visibleText.prefix(1500))
+        }
         return await ask(prompt, image: image)
     }
 

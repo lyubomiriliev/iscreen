@@ -45,6 +45,13 @@ struct SourceContext {
         return [label, formatter.string(from: date)].compactMap { $0 }.joined(separator: "  ·  ")
     }
 
+    /// "Screenshot-2026-10-20-at-14.32.05": no spaces, so the pasted path needs no quoting.
+    var pathSafeBaseName: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd-'at'-HH.mm.ss"
+        return "Screenshot-\(formatter.string(from: date))"
+    }
+
     /// "Safari – Stripe Payments 2026-10-20 at 14.32.05" (subject replaces the window title when given).
     func fileBaseName(subject: String? = nil) -> String {
         let main = Self.nonEmpty(subject) ?? cleanTitle
@@ -92,45 +99,5 @@ extension ScreenShot {
     func fullScreenContext() -> SourceContext {
         let window = windows.first { $0.app == frontApp } ?? windows.first
         return SourceContext(app: frontApp ?? window?.app, title: window?.title, date: capturedAt)
-    }
-}
-
-enum Caption {
-    /// Returns the image with a dark caption strip underneath: first line is the source, the rest is the description.
-    /// `scale` is pixels per point of the image (1 when Retina downscaling is on).
-    static func add(to image: CGImage, lines: [String], scale: CGFloat) -> CGImage? {
-        let pad = 10 * scale
-        let width = max(CGFloat(image.width), 300 * scale)
-        let textWidth = width - pad * 2
-
-        let text = NSMutableAttributedString()
-        for (i, line) in lines.enumerated() where !line.isEmpty {
-            let paragraph = NSMutableParagraphStyle()
-            paragraph.paragraphSpacingBefore = i == 0 ? 0 : 3 * scale
-            let attributes: [NSAttributedString.Key: Any] = i == 0
-                ? [.font: NSFont.systemFont(ofSize: 11 * scale, weight: .semibold),
-                   .foregroundColor: NSColor(white: 1, alpha: 0.6), .paragraphStyle: paragraph]
-                : [.font: NSFont.systemFont(ofSize: 13 * scale),
-                   .foregroundColor: NSColor(white: 1, alpha: 0.92), .paragraphStyle: paragraph]
-            text.append(NSAttributedString(string: (text.length > 0 ? "\n" : "") + line, attributes: attributes))
-        }
-        let options: NSString.DrawingOptions = [.usesLineFragmentOrigin, .usesFontLeading]
-        let textHeight = ceil(text.boundingRect(with: CGSize(width: textWidth, height: .greatestFiniteMagnitude),
-                                                options: options).height)
-        let captionHeight = textHeight + pad * 2
-
-        guard let space = CGColorSpace(name: CGColorSpace.sRGB),
-              let ctx = CGContext(data: nil, width: Int(width), height: image.height + Int(captionHeight), bitsPerComponent: 8,
-                                  bytesPerRow: 0, space: space, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
-        else { return nil }
-        ctx.setFillColor(CGColor(srgbRed: 0.11, green: 0.11, blue: 0.12, alpha: 1))
-        ctx.fill(CGRect(x: 0, y: 0, width: ctx.width, height: ctx.height))
-        ctx.draw(image, in: CGRect(x: 0, y: Int(captionHeight), width: image.width, height: image.height))
-
-        let previous = NSGraphicsContext.current
-        NSGraphicsContext.current = NSGraphicsContext(cgContext: ctx, flipped: false)
-        text.draw(with: CGRect(x: pad, y: pad, width: textWidth, height: textHeight), options: options)
-        NSGraphicsContext.current = previous
-        return ctx.makeImage()
     }
 }
