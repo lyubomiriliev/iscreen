@@ -3,5 +3,14 @@
   <channel>
     <title>iScreen</title>
     <!-- releases -->
+    <item>
+      <title>Version 1.4</title>
+      <pubDate>Tue, 20 Oct 2026 00:54:38 +0300</pubDate>
+      <sparkle:version>5</sparkle:version>
+      <sparkle:shortVersionString>1.4</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[<ul><li>Automatic updates: iScreen now updates itself (menu → Check for Updates…)</li><li>Copy text (⌘T), copy with description (⇧⌘C) and smart file names</li><li>Fixed Esc / ⌘C / ⌘S not working on some Macs and after drawing</li></ul>]]></description>
+      <enclosure url="https://github.com/lyubomiriliev/iscreen/releases/download/v1.4/iScreen-1.4.zip" type="application/octet-stream" sparkle:edSignature="wgY/yfn32BahbYWydyHgT4QosS3WdTntIFvjIvAc8fIZBa1OZ+UOE72In1JS2ZdhoEp/aYiFiW9DJ3KEncH2Cw==" length="2411456" />
+    </item>
   </channel>
 </rss>
