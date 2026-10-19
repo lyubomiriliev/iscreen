@@ -4,6 +4,15 @@
     <title>iScreen</title>
     <!-- releases -->
     <item>
+      <title>Version 1.5</title>
+      <pubDate>Tue, 20 Oct 2026 01:04:12 +0300</pubDate>
+      <sparkle:version>6</sparkle:version>
+      <sparkle:shortVersionString>1.5</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[<ul><li>⇧⌘C now copies text for Claude Code: the screenshot&#x27;s file path + where it&#x27;s from + an AI description (no more caption inside the image)</li><li>Descriptions spell names and titles exactly, including Cyrillic</li></ul>]]></description>
+      <enclosure url="https://github.com/lyubomiriliev/iscreen/releases/download/v1.5/iScreen-1.5.zip" type="application/octet-stream" sparkle:edSignature="7fozzIc2nGPMEy3pm92KTiy8w6UZrw01RNIuoQngV7an4JUEg5r5JcmbWbRGCmVimyTAhVuhdlz8PFIQLwHkCg==" length="2412467" />
+    </item>
+    <item>
       <title>Version 1.4</title>
       <pubDate>Tue, 20 Oct 2026 00:54:38 +0300</pubDate>
       <sparkle:version>5</sparkle:version>
