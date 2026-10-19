@@ -126,46 +126,31 @@ final class OverlayController {
         }
     }
 
-    /// Copies text for Claude Code: the saved screenshot's file path, where it came from and — when
-    /// available — an on-device AI description. Claude Code reads the image from the path, so one paste
-    /// delivers both. (Copying image and text together doesn't work: Claude Code keeps only the image.)
+    /// Image + description in two pastes: the first ⌘V attaches the image, after which the clipboard
+    /// switches to the description (where it came from + an on-device AI description) for the second ⌘V.
     func copyWithDescription(from view: SelectionView) {
         let source = sourceView(preferring: view)
         let context = source.sourceContext()
         let original = source.originalImage()
         guard let encoded = source.encode(),
-              let url = ScreenshotFiles.write(encoded.data, baseName: context.pathSafeBaseName)
+              let sequence = PasteSequence.begin(png: encoded.data, text: context.captionLine)
         else { cancel(); return }
-
-        func text(_ description: String?) -> String {
-            ["[Screenshot: \(url.path)]", context.captionLine, description].compactMap { $0 }.joined(separator: "\n")
-        }
-        // Path + source go on the clipboard right away, so a fast paste is never empty.
-        let copied = Clipboard.write(text: text(nil))
         close()
-        guard copied else {
-            HUD.show("Copy failed", symbol: "exclamationmark.triangle.fill")
-            return
-        }
-        guard OnDeviceAI.isAvailable else {
-            HUD.show("Copied screenshot path + source")
-            return
-        }
 
-        HUD.show("Writing description…", symbol: "sparkles", tint: .controlAccentColor, duration: 30)
-        let changeCount = NSPasteboard.general.changeCount
+        guard OnDeviceAI.isAvailable else {
+            sequence.finalizeText()
+            HUD.show("Copied — ⌘V pastes the image, then ⌘V again the source info", duration: 3)
+            return
+        }
+        HUD.show("Copied — ⌘V pastes the image, then ⌘V again the description", duration: 3)
         Task { @MainActor in
             let visibleText = await Task.detached(priority: .userInitiated) { original.map(TextRecognizer.recognize) }.value
             let description = await OnDeviceAI.describe(encoded.image, context: context, visibleText: visibleText)
-            // Don't clobber something the user copied in the meantime.
-            guard NSPasteboard.general.changeCount == changeCount else {
-                HUD.show("Description skipped — clipboard changed", symbol: "exclamationmark.triangle.fill")
-                return
-            }
-            if let description, Clipboard.write(text: text(description)) {
-                HUD.show("Copied screenshot path + description")
+            guard sequence.isActive else { return } // the user copied something else meanwhile
+            if let description {
+                sequence.update(text: context.captionLine + "\n" + description)
             } else {
-                HUD.show("Copied screenshot path + source")
+                sequence.finalizeText()
             }
         }
     }

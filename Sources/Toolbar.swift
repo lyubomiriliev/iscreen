@@ -58,7 +58,7 @@ final class AnnotationToolbar: NSView {
         save.onClick = { [weak self] in self?.onSave?() }
         let copyText = SymbolButton(symbol: "text.viewfinder", hint: "Copy text (OCR)   ⌘T")
         copyText.onClick = { [weak self] in self?.onCopyText?() }
-        let copyDescribed = SymbolButton(symbol: "text.below.photo", hint: "Copy for Claude Code: path + description   ⇧⌘C")
+        let copyDescribed = SymbolButton(symbol: "text.below.photo", hint: "Copy image + description (⌘V, then ⌘V)   ⇧⌘C")
         copyDescribed.onClick = { [weak self] in self?.onCopyDescribed?() }
         let copy = SymbolButton(symbol: "doc.on.doc", hint: "Copy   ⌘C", prominent: true)
         copy.onClick = { [weak self] in self?.onCopy?() }

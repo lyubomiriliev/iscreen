@@ -45,13 +45,6 @@ struct SourceContext {
         return [label, formatter.string(from: date)].compactMap { $0 }.joined(separator: "  ·  ")
     }
 
-    /// "Screenshot-2026-10-20-at-14.32.05": no spaces, so the pasted path needs no quoting.
-    var pathSafeBaseName: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd-'at'-HH.mm.ss"
-        return "Screenshot-\(formatter.string(from: date))"
-    }
-
     /// "Safari – Stripe Payments 2026-10-20 at 14.32.05" (subject replaces the window title when given).
     func fileBaseName(subject: String? = nil) -> String {
         let main = Self.nonEmpty(subject) ?? cleanTitle

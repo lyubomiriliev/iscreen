@@ -58,7 +58,7 @@ enum Capturer {
 }
 
 enum ScreenshotFiles {
-    /// Screenshots used for drag & drop and ⇧⌘C paths live here; files older than a week are cleaned up on launch.
+    /// Screenshots used for drag & drop live here; files older than a week are cleaned up on launch.
     static var directory: URL {
         let base = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
         let dir = base.appendingPathComponent("com.iscreen.app/Screenshots", isDirectory: true)
