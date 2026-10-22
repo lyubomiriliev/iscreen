@@ -111,18 +111,22 @@ final class OverlayController {
     }
 
     /// Recognizes the text in the area (offline, Apple Vision) and copies it as plain text.
+    /// Recognition runs in the background: usually instant, but after a long idle macOS may need a while
+    /// to reload its text-recognition models, and the overlay shouldn't freeze meanwhile.
     func copyText(from view: SelectionView) {
         guard let image = sourceView(preferring: view).originalImage() else { cancel(); return }
-        let text = TextRecognizer.recognize(image)
-        let ok = !text.isEmpty && Clipboard.write(text: text)
         close()
-        if text.isEmpty {
-            HUD.show("No text found", symbol: "text.magnifyingglass", tint: .systemOrange)
-        } else if ok {
-            let lines = text.components(separatedBy: "\n").filter { !$0.isEmpty }.count
-            HUD.show("Copied text  ·  \(lines) line\(lines == 1 ? "" : "s")")
-        } else {
-            HUD.show("Copy failed", symbol: "exclamationmark.triangle.fill")
+        HUD.show("Reading text…", symbol: "text.viewfinder", tint: .controlAccentColor, duration: 120)
+        Task { @MainActor in
+            let text = await Task.detached(priority: .userInitiated) { TextRecognizer.recognize(image) }.value
+            if text.isEmpty {
+                HUD.show("No text found", symbol: "text.magnifyingglass", tint: .systemOrange)
+            } else if Clipboard.write(text: text) {
+                let lines = text.components(separatedBy: "\n").filter { !$0.isEmpty }.count
+                HUD.show("Copied text  ·  \(lines) line\(lines == 1 ? "" : "s")")
+            } else {
+                HUD.show("Copy failed", symbol: "exclamationmark.triangle.fill")
+            }
         }
     }
 
@@ -151,6 +155,8 @@ final class OverlayController {
                 sequence.update(text: context.captionLine + "\n" + description)
             } else {
                 sequence.finalizeText()
+                HUD.show("Couldn't write a description — 2nd ⌘V pastes the source only",
+                         symbol: "exclamationmark.triangle.fill", duration: 4)
             }
         }
     }

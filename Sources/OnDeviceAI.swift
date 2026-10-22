@@ -43,14 +43,15 @@ enum OnDeviceAI {
     /// `visibleText` (from text recognition) lets the model quote names and titles exactly,
     /// e.g. Cyrillic text that it would otherwise misspell.
     static func describe(_ image: CGImage, context: SourceContext, visibleText: String? = nil) async -> String? {
-        var prompt = "Describe this screenshot in one or two short, factual sentences (max 40 words). "
-        prompt += "Mention what app or website it is and the key information visible."
-        if let label = context.label { prompt += " It was taken from: \(label)." }
+        var plain = "Describe this screenshot in one or two short, factual sentences (max 40 words). "
+        plain += "Mention what app or website it is and the key information visible."
+        if let label = context.label { plain += " It was taken from: \(label)." }
+        var detailed = plain
         if let visibleText, !visibleText.isEmpty {
-            prompt += "\n\nText recognized in the screenshot (copy names and titles exactly from here, in their original alphabet):\n"
-            prompt += String(visibleText.prefix(1500))
+            detailed += "\n\nText recognized in the screenshot (copy names and titles exactly from here, in their original alphabet):\n"
+            detailed += String(visibleText.prefix(1500))
         }
-        return await ask(prompt, image: image)
+        return await ask(detailed, fallback: plain, image: image, purpose: "description")
     }
 
     /// A 3–6 word title for a file name, or nil.
@@ -58,27 +59,46 @@ enum OnDeviceAI {
         var prompt = "Give this screenshot a short descriptive title of 3 to 6 words in Title Case. "
         prompt += "Reply with the title only: no quotes, no punctuation, no file extension."
         if let app = context.app { prompt += " Don't include the app name (\(app))." }
-        guard let answer = await ask(prompt, image: image) else { return nil }
+        guard let answer = await ask(prompt, fallback: prompt, image: image, purpose: "file name") else { return nil }
         let firstLine = answer.components(separatedBy: .newlines).first ?? answer
         let cleaned = firstLine.trimmingCharacters(in: CharacterSet(charactersIn: "\"'“”.:*#").union(.whitespaces))
         return cleaned.isEmpty || cleaned.count > 60 ? nil : cleaned
     }
 
-    private static func ask(_ instruction: String, image: CGImage) async -> String? {
+    /// The model can refuse or throttle requests now and then — especially from a background app like
+    /// iScreen — so try up to three times: the full prompt twice, then a lighter prompt with a smaller image.
+    private static func ask(_ prompt: String, fallback: String, image: CGImage, purpose: String) async -> String? {
+        guard isAvailable else { return nil }
+        let attempts: [(prompt: String, maxSide: Int, delay: Double)] = [
+            (prompt, 1600, 0), (prompt, 1600, 1.5), (fallback, 1024, 1.5),
+        ]
+        for (index, attempt) in attempts.enumerated() {
+            if attempt.delay > 0 { try? await Task.sleep(nanoseconds: UInt64(attempt.delay * 1_000_000_000)) }
+            let input = limited(image, maxSide: attempt.maxSide)
+            let answer = await withTimeout(seconds: 15) { await respond(attempt.prompt, image: input, purpose: purpose) }
+            if let answer {
+                if index > 0 { Log.write("AI \(purpose) succeeded on attempt \(index + 1)") }
+                return answer
+            }
+        }
+        Log.write("AI \(purpose): all attempts failed")
+        return nil
+    }
+
+    private static func respond(_ prompt: String, image: CGImage, purpose: String) async -> String? {
         #if canImport(FoundationModels)
         if #available(macOS 27.0, *) {
-            guard isAvailable else { return nil }
             let session = LanguageModelSession(model: SystemLanguageModel.default,
                                                instructions: "You look at screenshots and answer briefly and factually.")
             do {
                 let response = try await session.respond(to: Prompt {
-                    instruction
-                    Attachment(limited(image))
+                    prompt
+                    Attachment(image)
                 })
                 let text = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
                 return text.isEmpty ? nil : text
             } catch {
-                NSLog("iScreen: on-device AI failed: \(error)")
+                Log.write("AI \(purpose) attempt failed: \(error)")
                 return nil
             }
         }
@@ -86,8 +106,23 @@ enum OnDeviceAI {
         return nil
     }
 
+    /// Returns nil if `operation` takes longer than `seconds`.
+    private static func withTimeout<T>(seconds: Double, _ operation: @escaping () async -> T?) async -> T? {
+        await withTaskGroup(of: T?.self) { group in
+            group.addTask { await operation() }
+            group.addTask {
+                try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+                return nil
+            }
+            let first = await group.next() ?? nil
+            group.cancelAll()
+            if first == nil { Log.write("AI request returned nothing within \(Int(seconds)) s") }
+            return first
+        }
+    }
+
     /// Keeps the model input reasonably small for speed.
-    private static func limited(_ image: CGImage, maxSide: Int = 1600) -> CGImage {
+    private static func limited(_ image: CGImage, maxSide: Int) -> CGImage {
         let longest = max(image.width, image.height)
         guard longest > maxSide else { return image }
         let factor = CGFloat(maxSide) / CGFloat(longest)
