@@ -4,6 +4,15 @@
     <title>iScreen</title>
     <!-- releases -->
     <item>
+      <title>Version 1.7</title>
+      <pubDate>Thu, 22 Oct 2026 20:00:28 +0300</pubDate>
+      <sparkle:version>8</sparkle:version>
+      <sparkle:shortVersionString>1.7</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[<ul><li>Copy text (⌘T) works reliably: better handling of screen captures, automatic retries, no more freezing while reading</li><li>Image + description (⇧⌘C): the AI description retries automatically, and you&#x27;re told if it couldn&#x27;t be written</li></ul>]]></description>
+      <enclosure url="https://github.com/lyubomiriliev/iscreen/releases/download/v1.7/iScreen-1.7.zip" type="application/octet-stream" sparkle:edSignature="nCbePZ3zGXh+pavedaGZT57lJCYDenqRTyLJeLSGUYssJtItDcHWHeN2/gob5KJiM06fueenM0HrjRxTusARDg==" length="2450716" />
+    </item>
+    <item>
       <title>Version 1.6</title>
       <pubDate>Tue, 20 Oct 2026 01:08:00 +0300</pubDate>
       <sparkle:version>7</sparkle:version>
